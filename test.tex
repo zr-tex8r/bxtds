@@ -1,0 +1,99 @@
+\documentclass{article}
+\usepackage{xparse,expl3,bxtds}
+\ExplSyntaxOn  %!!!!!!!!!!!!!!!!!!!!!!!! expl3 code BEGIN
+
+%--------------------------------------- helpers
+
+\cs_new:Nn \bxtds_T_assert:nnn
+  {
+    \bool_if:nF {#2}
+      {
+        \iow_term:x { @@@@@@@@FAILURE:~#1 }
+        \tl_if_empty:nF {#3} { \iow_term:x { @~#3 } }
+      }
+  }
+\cs_new:Nn \bxtds_T_assert:nn
+  { \bxtds_T_assert:nnn {#1} {#2} {} }
+\cs_new:Nn \bxtds_T_tl_eq:nnn
+  {
+    \tl_set:Nx \l_tmpa_tl {#2}
+    \tl_set:Nn \l_tmpb_tl {#3}
+    \bxtds_T_assert:nnn {#1} { \tl_if_eq_p:NN \l_tmpa_tl \l_tmpb_tl }
+      { Got:~ \l_tmpa_tl .~Expected:~ \exp_not:V \l_tmpb_tl . }
+  }
+\cs_new:Nn \bxtds_T_int_eq:nnn
+  {
+    \int_set:Nn \l_tmpa_int {#2}
+    \int_set:Nn \l_tmpb_int {#3}
+    \bxtds_T_assert:nnn {#1} { \int_compare_p:nNn { \l_tmpa_int } = { \l_tmpb_int } }
+      { Got:~ \int_use:N \l_tmpa_int .~Expected:~ \int_use:N \l_tmpb_int . }
+  }
+\cs_new:Nn \bxtds_T_int_eq_bg:nnn
+  {
+    #2 \l_tmpa_int
+    \int_set:Nn \l_tmpb_int {#3}
+    \bxtds_T_assert:nnn {#1} { \int_compare_p:nNn { \l_tmpa_int } = { \l_tmpb_int } }
+      { Got:~ \int_use:N \l_tmpa_int .~Expected:~ \int_use:N \l_tmpb_int . }
+  }
+
+%--------------------------------------- base (arithmetic)
+\DeclareDocumentCommand \TestArithI {}
+  {
+    \bxtds_T_int_eq:nnn { exp(0) } { \bxtds_exp:n { 0 } } { 1 }
+    \bxtds_T_int_eq:nnn { exp(1) } { \bxtds_exp:n { 1 } } { 2 }
+    \bxtds_T_int_eq:nnn { exp(5) } { \bxtds_exp:n { 5 } } { 32 }
+    \bxtds_T_int_eq:nnn { exp(25) } { \bxtds_exp:n { 25 } } { "2000000 }
+    \bxtds_T_int_eq:nnn { exp(30) } { \bxtds_exp:n { 30 } } { "40000000 }
+    \bxtds_T_int_eq:nnn { exp(31) } { \bxtds_exp:n { 31 } } { 0 }
+    \bxtds_T_int_eq:nnn { exp(-1) } { \bxtds_exp:n { -1 } } { 0 }
+    \bxtds_T_int_eq:nnn { ilog(1) } { \bxtds_ilog:n { 1 } } { 0 }
+    \bxtds_T_int_eq:nnn { ilog(100) } { \bxtds_ilog:n { 100 } } { 6 }
+    \bxtds_T_int_eq:nnn { ilog(10000) } { \bxtds_ilog:n { 10000 } } { 13 }
+    \bxtds_T_int_eq:nnn { ilog(1000000) } { \bxtds_ilog:n { 1000000 } } { 19 }
+    \bxtds_T_int_eq:nnn { ilog(100000000) } { \bxtds_ilog:n { 100000000 } } { 26 }
+    \bxtds_T_int_eq:nnn { ilog("FF) } { \bxtds_ilog:n { "FF } } { 7 }
+    \bxtds_T_int_eq:nnn { ilog("100) } { \bxtds_ilog:n { "100 } } { 8 }
+    \bxtds_T_int_eq:nnn { ilog("FFFF) } { \bxtds_ilog:n { "FFFF } } { 15 }
+    \bxtds_T_int_eq:nnn { ilog("10000) } { \bxtds_ilog:n { "10000 } } { 16 }
+    \bxtds_T_int_eq:nnn { ilog("FFFFFF) } { \bxtds_ilog:n { "FFFFFF } } { 23 }
+    \bxtds_T_int_eq:nnn { ilog("1000000) } { \bxtds_ilog:n { "1000000 } } { 24 }
+    \bxtds_T_int_eq:nnn { ilog("7FFFFFFF) } { \bxtds_ilog:n { "7FFFFFFF } } { 30 }
+    \bxtds_T_int_eq:nnn { ilog(0) } { \bxtds_ilog:n { 0 } } { 0 }
+    \bxtds_T_int_eq:nnn { ilog(-42) } { \bxtds_ilog:n { -42 } } { 0 }
+    \bxtds_T_int_eq_bg:nnn { sqrt(0) } { \bxtds_get_isqrt:nN { 0 } } { 0 }
+    \bxtds_T_int_eq_bg:nnn { sqrt(1) } { \bxtds_get_isqrt:nN { 1 } } { 1 }
+    \bxtds_T_int_eq_bg:nnn { sqrt(2) } { \bxtds_get_isqrt:nN { 2 } } { 1 }
+    \bxtds_T_int_eq_bg:nnn { sqrt(3) } { \bxtds_get_isqrt:nN { 3 } } { 1 }
+    \bxtds_T_int_eq_bg:nnn { sqrt(5) } { \bxtds_get_isqrt:nN { 5 } } { 2 }
+    \bxtds_T_int_eq_bg:nnn { sqrt(8) } { \bxtds_get_isqrt:nN { 8 } } { 2 }
+    \bxtds_T_int_eq_bg:nnn { sqrt(13) } { \bxtds_get_isqrt:nN { 13 } } { 3 }
+    \bxtds_T_int_eq_bg:nnn { sqrt(21) } { \bxtds_get_isqrt:nN { 21 } } { 4 }
+    \bxtds_T_int_eq_bg:nnn { sqrt(34) } { \bxtds_get_isqrt:nN { 34 } } { 5 }
+    \bxtds_T_int_eq_bg:nnn { sqrt(55) } { \bxtds_get_isqrt:nN { 55 } } { 7 }
+    \bxtds_T_int_eq_bg:nnn { sqrt(89) } { \bxtds_get_isqrt:nN { 89 } } { 9 }
+  }
+\DeclareDocumentCommand \TestArithII {}
+  {
+    \int_step_inline:nnn { 1 } { 1000000 }
+      {
+        \int_set:Nn \l_tmpa_int { \bxtds_ilog:n {##1} }
+        \int_set:Nn \l_tmpb_int { \bxtds_exp:n { \l_tmpa_int } }
+        \int_compare:nNnT {##1} < { \l_tmpb_int }
+          { \iow_term:x { @@@@@@@@FAILURE:~ilog_exp_1(##1) } }
+        \int_compare:nNnF {##1} < { \l_tmpb_int * 2 }
+          { \iow_term:x { @@@@@@@@FAILURE:~ilog_exp_2(##1) } }
+        %\iow_term:x { ##1~->~ \int_use:N \l_tmpb_int }
+        \bxtds_get_isqrt:nN {##1} \l_tmpa_int
+        \int_compare:nNnT {##1} < { \l_tmpa_int * \l_tmpa_int }
+          { \iow_term:x { @@@@@@@@FAILURE:~ilog_exp_1(##1) } }
+        \int_incr:N \l_tmpa_int
+        \int_compare:nNnF {##1} < { \l_tmpa_int * \l_tmpa_int }
+          { \iow_term:x { @@@@@@@@FAILURE:~ilog_exp_2(##1) } }
+        %\message { ##1 }
+      }
+  }
+\ExplSyntaxOff %!!!!!!!!!!!!!!!!!!!!!!!! expl3 code END
+\begin{document}
+\TestArithI
+\TestArithII
+\end{document}

@@ -1,0 +1,204 @@
+%%
+%% This is file 'bxtds-base.sty'.
+%%
+%% Copyright (c) 2018 Takayuki YATO (aka. "ZR")
+%%   GitHub:   https://github.com/zr-tex8r
+%%   Twitter:  @zr_tex8r
+%%
+%% This package is distributed under the MIT License.
+%%
+
+%% package declaration
+\RequirePackage{expl3,xparse}
+\ProvidesExplPackage {bxtds-base} {2018/08/20} {0.1}
+  {TeXies' Data Structure}
+\str_const:Nn \c_bxtds_b_pkgname_str { bxtds-base }
+
+%===========================================================
+% Common stuffs
+%--------------------------------------- debug messages
+
+\cs_new:Npn \bxtds_debug:Nnn #1#2
+  {
+    \bool_if:NTF #1
+      { \bxtds_debug:nn {#2} }
+      { \use_none:n }
+  }
+\cs_new:Nn \bxtds_debug:nn
+  {
+    \iow_term:x { * #1 >> #2 }
+  }
+
+%% for this subpackage
+\cs_new:Npn \bxtds_b_debug:n
+  { \bxtds_debug:Nnn \c_true_bool { \c_bxtds_b_pkgname_str } }
+
+%--------------------------------------- constants
+
+\int_const:Nn \c__bxtds_xxx_int { 30 }
+\int_const:Nn \c__bxtds_xxxi_int { 31 }
+\int_const:Nn \c__bxtds_two_to_thirty_int { "40000000 }
+
+%--------------------------------------- variables
+
+\int_new:N \l__bxtds_x_int
+\int_new:N \l__bxtds_y_int
+
+%===========================================================
+% Basic arithmetic
+%--------------------------------------- common
+
+%% constants
+\int_const:Nn \c__bxtds_isqrt_hllimit_int { 10 } % can be changed (10..15)
+\int_const:Nn \c__bxtds_sl_table_size_int { \fp_to_int:n { round(2 ** (\c__bxtds_isqrt_hllimit_int + 1)) } }
+
+%% create the table
+\intarray_new:Nn \g__bxtds_sl_intarray { \c__bxtds_sl_table_size_int }
+
+%--------------------------------------- ilog function
+
+%% constants
+\int_const:Nn \c__bxtds_thres_first_int { "100 }
+\int_const:Nn \c__bxtds_thres_second_int { "10000 }
+\int_const:Nn \c__bxtds_thres_third_int { "1000000 }
+
+%% fill the table
+% The first 256 + 30 entries are used by exp and ilog.
+\group_begin:
+  \int_set:Nn \l_tmpb_int { 1 }
+  \int_step_variable:nnNn { 0 } { 7 } \l_tmpa_tl
+    {
+      \int_step_inline:nnn { \l_tmpb_int } { \l_tmpb_int * 2 - 1 }
+        { \intarray_gset:Nnn \g__bxtds_sl_intarray {#1} { \l_tmpa_tl } }
+      \int_set:Nn \l_tmpb_int { \l_tmpb_int * 2 }
+    }
+  \int_set:Nn \l_tmpb_int { 1 }
+  \int_step_inline:nnn { 0 } { 29 }
+    {
+      \intarray_gset:Nnn \g__bxtds_sl_intarray { \c__bxtds_thres_first_int + #1 } { \l_tmpb_int }
+      \int_set:Nn \l_tmpb_int { \l_tmpb_int * 2 }
+    }
+\group_end:
+
+%% exp function
+\cs_new:Nn \bxtds_exp:n % {x:intexpr} ;[Fx]
+  { \int_eval:n { \exp_args:No \__bxtds_exp_aux:n { \int_eval:w #1 \scan_stop: } } }
+\cs_new:Nn \__bxtds_exp_aux:n
+  {
+    \if_int_compare:w #1 < \c_zero_int
+      \c_zero_int
+    \else:
+      \if_int_compare:w #1 < \c__bxtds_xxx_int
+        \bxtds_exp_db:n { #1 }
+      \else:
+        \if_int_compare:w #1 < \c__bxtds_xxxi_int
+          \c__bxtds_two_to_thirty_int
+        \else:
+          \c_zero_int
+        \fi:
+      \fi:
+    \fi:
+  }
+\cs_new:Nn \bxtds_exp_db:n % {x:int} ;[Rx] x must be in 0..29
+  { \intarray_item:Nn \g__bxtds_sl_intarray { \c__bxtds_thres_first_int + #1 } }
+
+%% ilog function
+\cs_new:Nn \bxtds_ilog:n % {x:intexpr} ;[Fx]
+  { \int_eval:n { \exp_args:No \__bxtds_ilog_aux:n { \int_eval:w #1 \scan_stop: } } }
+\cs_new:Nn \__bxtds_ilog_aux:n
+  { \int_compare:nNnTF { #1 } < { \c_one_int } { \c_zero_int } { \bxtds_ilog_db:n { #1 } } }
+\cs_new:Nn \bxtds_ilog_db:n % {x:int} ;[Rx] % x must be > 0
+  {
+    \if_int_compare:w #1 < \c__bxtds_thres_first_int
+      \intarray_item:Nn \g__bxtds_sl_intarray { #1 }
+    \else:
+      \if_int_compare:w #1 < \c__bxtds_thres_second_int
+        \__bxtds_ilog_db_aux:nnn { #1 } { \c__bxtds_thres_first_int } { 8 }
+      \else:
+        \if_int_compare:w #1 < \c__bxtds_thres_third_int
+          \__bxtds_ilog_db_aux:nnn { #1 } { \c__bxtds_thres_second_int } { 16 }
+        \else:
+          \__bxtds_ilog_db_aux:nnn { #1 } { \c__bxtds_thres_third_int } { 24 }
+        \fi:
+      \fi:
+    \fi:
+  }
+\cs_new:Nn \__bxtds_ilog_db_aux:nnn
+  { \intarray_item:Nn \g__bxtds_sl_intarray { \int_div_truncate:nn { #1 } { #2 } } + #3 }
+
+%--------------------------------------- isqrt function
+
+%% constants
+\int_const:Nn \c__bxtds_isqrt_llimit_int { \c__bxtds_isqrt_hllimit_int * 2 }
+\int_const:Nn \c__bxtds_isqrt_limit_int { \bxtds_exp:n { \c__bxtds_isqrt_llimit_int } }
+
+%% variables
+\int_new:N \l__bxtds_ilogx_int
+\int_new:N \l__bxtds_sqrtu_int
+
+%% fill the table
+\group_begin:
+  \int_set:Nn \l_tmpa_int { \c__bxtds_sl_table_size_int / 4 }
+  \int_set:Nn \l_tmpb_int { \bxtds_exp:n { \c__bxtds_isqrt_hllimit_int - 1 } }
+  \int_step_inline:nnn { \l_tmpa_int } { \c__bxtds_sl_table_size_int - 1 }
+    {
+      \int_incr:N \l_tmpa_int
+      \int_compare:nNnT { \l_tmpa_int * \l_tmpa_int } > { #1 * \l_tmpb_int }
+        { \int_decr:N \l_tmpa_int }
+      \intarray_gset:Nnn \g__bxtds_sl_intarray { #1 } { \l_tmpa_int }
+    }
+\group_end:
+
+\cs_new_protected:Nn \bxtds_get_isqrt:nN % {x:intexpr} \RET_int
+  {
+    \int_set:Nn \l__bxtds_x_int {#1}
+    \if_int_compare:w \l__bxtds_x_int < \c_one_int
+      \int_zero:N #2
+    \else:
+      \if_int_compare:w \l__bxtds_x_int < \c__bxtds_isqrt_limit_int
+        \__bxtds_get_isqrt_db_aux:
+        \int_set_eq:NN #2 \l__bxtds_y_int
+      \else:
+        \int_zero:N #2
+      \fi:
+    \fi:
+  }
+\cs_new_protected:Nn \bxtds_get_isqrt_db:nN % {x:intexpr} \RET_int
+  {
+    \int_set:Nn \l__bxtds_x_int {#1}
+    \if_int_compare:w \l__bxtds_x_int < \c_one_int
+      \int_zero:N #2
+    \else:
+      \__bxtds_get_isqrt_db_aux:
+      \int_set_eq:NN #2 \l__bxtds_y_int
+    \fi:
+  }
+\int_const:Nn \c__bxtds_isqrt_downdiv_int { \bxtds_exp:n { \c__bxtds_isqrt_hllimit_int - 1 } }
+\cs_new:Nn \__bxtds_get_isqrt_db_aux:
+  {
+    \int_set:Nn \l__bxtds_sqrtu_int % cf. n div 2 = (n-1)/2
+      { \bxtds_exp_db:n { (\c__bxtds_isqrt_llimit_int - (\bxtds_ilog:n { \l__bxtds_x_int })) / 2 - 1} }
+    \int_set:Nn \l__bxtds_y_int
+      {
+        \int_div_truncate:nn { \l__bxtds_x_int * \l__bxtds_sqrtu_int * \l__bxtds_sqrtu_int }
+          { \c__bxtds_isqrt_downdiv_int }
+      }
+    \int_set:Nn \l__bxtds_y_int
+      {
+        \int_div_truncate:nn { \intarray_item:Nn \g__bxtds_sl_intarray { \l__bxtds_y_int } }
+          { \l__bxtds_sqrtu_int }
+      }
+    \int_incr:N \l__bxtds_y_int
+    \if_int_compare:w \int_eval:w \l__bxtds_y_int * \l__bxtds_y_int > \l__bxtds_x_int
+      \int_decr:N \l__bxtds_y_int
+    \else:
+      \int_incr:N \l__bxtds_y_int
+      \if_int_compare:w \int_eval:w \l__bxtds_y_int * \l__bxtds_y_int > \l__bxtds_x_int
+        \int_decr:N \l__bxtds_y_int
+      \fi:
+    \fi:
+  }
+
+%===========================================================
+\endinput
+%% EOF
