@@ -1,0 +1,6 @@
+etc0/
+ref/
+work/
+*.aux
+*.log
+*.dvi
