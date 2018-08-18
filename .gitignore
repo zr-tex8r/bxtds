@@ -4,3 +4,5 @@ work/
 *.aux
 *.log
 *.dvi
+*.exe
+zrt*
